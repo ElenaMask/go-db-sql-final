@@ -2,9 +2,14 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
+	"errors"
+	"time"
+)
 
-	_ "modernc.org/sqlite"
+const (
+	ParcelStatusRegistered = "registered"
+	ParcelStatusSent       = "sent"
+	ParcelStatusDelivered  = "delivered"
 )
 
 type Parcel struct {
@@ -14,21 +19,19 @@ type Parcel struct {
 	Address   string
 	CreatedAt string
 }
+
 type ParcelStore struct {
-	db *sql.DB
+	DB *sql.DB
 }
 
-func NewParcelStore(db *sql.DB) ParcelStore {
-	return ParcelStore{db: db}
-}
-
-func (s ParcelStore) Add(p Parcel) (int, error) {
-	result, err := s.db.Exec(`
+func (ps *ParcelStore) RegisterParcel(client int, address string) (int, error) {
+	result, err := ps.DB.Exec(`
 		INSERT INTO parcel (client, status, address, created_at)
-		VALUES (?, ?, ?, ?)
-	`, p.Client, p.Status, p.Address, p.CreatedAt)
+		VALUES (?, ?, ?, ?)`,
+		client, ParcelStatusRegistered, address, time.Now().Format(time.RFC3339),
+	)
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
 	id, err := result.LastInsertId()
 	if err != nil {
@@ -37,30 +40,8 @@ func (s ParcelStore) Add(p Parcel) (int, error) {
 	return int(id), nil
 }
 
-func (s ParcelStore) Get(number int) (Parcel, error) {
-	row := s.db.QueryRow(`
-		SELECT number, client, status, address, created_at
-		FROM parcel
-		WHERE number = ?
-	`, number)
-
-	var p Parcel
-	err := row.Scan(&p.Number, &p.Client, &p.Status, &p.Address, &p.CreatedAt)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return p, fmt.Errorf("parcel not found")
-		}
-		return p, err
-	}
-	return p, nil
-}
-
-func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
-	rows, err := s.db.Query(`
-		SELECT number, client, status, address, created_at
-		FROM parcel
-		WHERE client = ?
-	`, client)
+func (ps *ParcelStore) GetParcelsByClient(client int) ([]Parcel, error) {
+	rows, err := ps.DB.Query(`SELECT number, client, status, address, created_at FROM parcel WHERE client = ?`, client)
 	if err != nil {
 		return nil, err
 	}
@@ -77,66 +58,33 @@ func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 	return parcels, nil
 }
 
-func (s ParcelStore) SetStatus(number int, status string) error {
-	_, err := s.db.Exec(`
-		UPDATE parcel
-		SET status = ?
-		WHERE number = ?
-	`, status, number)
+func (ps *ParcelStore) UpdateParcelStatus(number int, status string) error {
+	_, err := ps.DB.Exec(`UPDATE parcel SET status = ? WHERE number = ?`, status, number)
 	return err
 }
 
-func (s ParcelStore) SetAddress(number int, address string) error {
-	// Проверяем текущий статус посылки
-	row := s.db.QueryRow(`
-		SELECT status
-		FROM parcel
-		WHERE number = ?
-	`, number)
-
+func (ps *ParcelStore) UpdateParcelAddress(number int, address string) error {
 	var status string
-	if err := row.Scan(&status); err != nil {
-		if err == sql.ErrNoRows {
-			return fmt.Errorf("parcel not found")
-		}
+	err := ps.DB.QueryRow(`SELECT status FROM parcel WHERE number = ?`, number).Scan(&status)
+	if err != nil {
 		return err
 	}
-
 	if status != ParcelStatusRegistered {
-		return fmt.Errorf("address can only be updated for registered parcels")
+		return errors.New("address can only be updated for registered parcels")
 	}
-
-	_, err := s.db.Exec(`
-		UPDATE parcel
-		SET address = ?
-		WHERE number = ?
-	`, address, number)
+	_, err = ps.DB.Exec(`UPDATE parcel SET address = ? WHERE number = ?`, address, number)
 	return err
 }
 
-func (s ParcelStore) Delete(number int) error {
-	// Проверяем текущий статус посылки
-	row := s.db.QueryRow(`
-		SELECT status
-		FROM parcel
-		WHERE number = ?
-	`, number)
-
+func (ps *ParcelStore) DeleteParcel(number int) error {
 	var status string
-	if err := row.Scan(&status); err != nil {
-		if err == sql.ErrNoRows {
-			return fmt.Errorf("parcel not found")
-		}
+	err := ps.DB.QueryRow(`SELECT status FROM parcel WHERE number = ?`, number).Scan(&status)
+	if err != nil {
 		return err
 	}
-
 	if status != ParcelStatusRegistered {
-		return fmt.Errorf("parcel can only be deleted if status is registered")
+		return errors.New("only registered parcels can be deleted")
 	}
-
-	_, err := s.db.Exec(`
-		DELETE FROM parcel
-		WHERE number = ?
-	`, number)
+	_, err = ps.DB.Exec(`DELETE FROM parcel WHERE number = ?`, number)
 	return err
 }

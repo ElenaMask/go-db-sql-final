@@ -2,59 +2,89 @@ package main
 
 import (
 	"database/sql"
+	"errors"
+	"time"
 )
 
+const (
+	ParcelStatusRegistered = "registered"
+	ParcelStatusSent       = "sent"
+	ParcelStatusDelivered  = "delivered"
+)
+
+type Parcel struct {
+	Number    int
+	Client    int
+	Status    string
+	Address   string
+	CreatedAt string
+}
+
 type ParcelStore struct {
-	db *sql.DB
+	DB *sql.DB
 }
 
-func NewParcelStore(db *sql.DB) ParcelStore {
-	return ParcelStore{db: db}
+func (ps *ParcelStore) RegisterParcel(client int, address string) (int, error) {
+	result, err := ps.DB.Exec(`
+		INSERT INTO parcel (client, status, address, created_at)
+		VALUES (?, ?, ?, ?)`,
+		client, ParcelStatusRegistered, address, time.Now().Format(time.RFC3339),
+	)
+	if err != nil {
+		return 0, err
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	return int(id), nil
 }
 
-func (s ParcelStore) Add(p Parcel) (int, error) {
-	// реализуйте добавление строки в таблицу parcel, используйте данные из переменной p
+func (ps *ParcelStore) GetParcelsByClient(client int) ([]Parcel, error) {
+	rows, err := ps.DB.Query(`SELECT number, client, status, address, created_at FROM parcel WHERE client = ?`, client)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-	// верните идентификатор последней добавленной записи
-	return 0, nil
+	var parcels []Parcel
+	for rows.Next() {
+		var p Parcel
+		if err := rows.Scan(&p.Number, &p.Client, &p.Status, &p.Address, &p.CreatedAt); err != nil {
+			return nil, err
+		}
+		parcels = append(parcels, p)
+	}
+	return parcels, nil
 }
 
-func (s ParcelStore) Get(number int) (Parcel, error) {
-	// реализуйте чтение строки по заданному number
-	// здесь из таблицы должна вернуться только одна строка
-
-	// заполните объект Parcel данными из таблицы
-	p := Parcel{}
-
-	return p, nil
+func (ps *ParcelStore) UpdateParcelStatus(number int, status string) error {
+	_, err := ps.DB.Exec(`UPDATE parcel SET status = ? WHERE number = ?`, status, number)
+	return err
 }
 
-func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
-	// реализуйте чтение строк из таблицы parcel по заданному client
-	// здесь из таблицы может вернуться несколько строк
-
-	// заполните срез Parcel данными из таблицы
-	var res []Parcel
-
-	return res, nil
+func (ps *ParcelStore) UpdateParcelAddress(number int, address string) error {
+	var status string
+	err := ps.DB.QueryRow(`SELECT status FROM parcel WHERE number = ?`, number).Scan(&status)
+	if err != nil {
+		return err
+	}
+	if status != ParcelStatusRegistered {
+		return errors.New("address can only be updated for registered parcels")
+	}
+	_, err = ps.DB.Exec(`UPDATE parcel SET address = ? WHERE number = ?`, address, number)
+	return err
 }
 
-func (s ParcelStore) SetStatus(number int, status string) error {
-	// реализуйте обновление статуса в таблице parcel
-
-	return nil
-}
-
-func (s ParcelStore) SetAddress(number int, address string) error {
-	// реализуйте обновление адреса в таблице parcel
-	// менять адрес можно только если значение статуса registered
-
-	return nil
-}
-
-func (s ParcelStore) Delete(number int) error {
-	// реализуйте удаление строки из таблицы parcel
-	// удалять строку можно только если значение статуса registered
-
-	return nil
+func (ps *ParcelStore) DeleteParcel(number int) error {
+	var status string
+	err := ps.DB.QueryRow(`SELECT status FROM parcel WHERE number = ?`, number).Scan(&status)
+	if err != nil {
+		return err
+	}
+	if status != ParcelStatusRegistered {
+		return errors.New("only registered parcels can be deleted")
+	}
+	_, err = ps.DB.Exec(`DELETE FROM parcel WHERE number = ?`, number)
+	return err
 }

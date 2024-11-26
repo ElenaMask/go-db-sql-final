@@ -33,7 +33,7 @@ func getTestParcel() Parcel {
 func TestAddGetDelete(t *testing.T) {
 	// prepare
 	db, err := sql.Open("sqlite", "tracker.db")
-	require.NoError(t, err, "Несмог подключиться к базе, ошибка")
+	require.NoError(t, err, "Не смог подключиться к базе, ошибка")
 	defer db.Close()
 	store := NewParcelStore(db)
 	parcel := getTestParcel()
@@ -41,7 +41,7 @@ func TestAddGetDelete(t *testing.T) {
 	// add
 	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
 	id, err := store.Add(parcel)
-	require.NoError(t, err, "Несмог добавить посылку, ошибка")
+	require.NoError(t, err, "Не смог добавить посылку, ошибка")
 	require.NotZero(t, id, "Посылку положил, но id у нее 0")
 	parcel.Number = id
 
@@ -49,14 +49,14 @@ func TestAddGetDelete(t *testing.T) {
 	// получите только что добавленную посылку, убедитесь в отсутствии ошибки
 	// проверьте, что значения всех полей в полученном объекте совпадают со значениями полей в переменной parcel
 	secondParcel, err := store.Get(id)
-	require.NoError(t, err, "Несмог получить посылку, ошибка")
+	require.NoError(t, err, "Не смог получить посылку, ошибка")
 	require.Equal(t, parcel, secondParcel, "Отправленная и полученная посылки не совпадают")
 
 	// delete
 	// удалите добавленную посылку, убедитесь в отсутствии ошибки
 	// проверьте, что посылку больше нельзя получить из БД
 	err = store.Delete(id)
-	require.NoError(t, err, "Несмог удалить посылку, ошибка")
+	require.NoError(t, err, "Не смог удалить посылку, ошибка")
 	_, err = store.Get(id)
 	require.Error(t, err, "Посулку которую удаляли удалось получить")
 }
@@ -65,7 +65,7 @@ func TestAddGetDelete(t *testing.T) {
 func TestSetAddress(t *testing.T) {
 	// prepare
 	db, err := sql.Open("sqlite", "tracker.db")
-	require.NoError(t, err, "Несмог подключиться к базе, ошибка")
+	require.NoError(t, err, "Не смог подключиться к базе, ошибка")
 	defer db.Close()
 	store := NewParcelStore(db)
 	parcel := getTestParcel()
@@ -73,19 +73,19 @@ func TestSetAddress(t *testing.T) {
 	// add
 	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
 	id, err := store.Add(parcel)
-	require.NoError(t, err, "Несмог добавить посылку, ошибка")
+	require.NoError(t, err, "Не смог добавить посылку, ошибка")
 	require.NotZero(t, id, "Посылку положил, но id у нее 0")
 
 	// set address
 	// обновите адрес, убедитесь в отсутствии ошибки
 	newAddress := "new test address"
 	err = store.SetAddress(id, newAddress)
-	require.NoError(t, err, "Несмог изменить адрес, ошибка")
+	require.NoError(t, err, "Не смог изменить адрес, ошибка")
 
 	// check
 	// получите добавленную посылку и убедитесь, что адрес обновился
 	secondParcel, err := store.Get(id)
-	require.NoError(t, err, "Несмог получить посылку, ошибка")
+	require.NoError(t, err, "Не смог получить посылку, ошибка")
 	require.Equal(t, newAddress, secondParcel.Address, "Адрес у полученной из базы посылки не верный")
 }
 
@@ -93,7 +93,7 @@ func TestSetAddress(t *testing.T) {
 func TestSetStatus(t *testing.T) {
 	// prepareы
 	db, err := sql.Open("sqlite", "tracker.db")
-	require.NoError(t, err, "Несмог подключиться к базе, ошибка")
+	require.NoError(t, err, "Не смог подключиться к базе, ошибка")
 	defer db.Close()
 	store := NewParcelStore(db)
 	parcel := getTestParcel()
@@ -101,19 +101,19 @@ func TestSetStatus(t *testing.T) {
 	// add
 	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
 	id, err := store.Add(parcel)
-	require.NoError(t, err, "Несмог добавить посылку, ошибка")
+	require.NoError(t, err, "Не смог добавить посылку, ошибка")
 	require.NotZero(t, id, "Посылку положил, но id у нее 0")
 
 	// set status
 	// обновите статус, убедитесь в отсутствии ошибки
 	newStatus := ParcelStatusDelivered
 	err = store.SetStatus(id, newStatus)
-	require.NoError(t, err, "Несмог изменить статус посылки, ошибка")
+	require.NoError(t, err, "Не смог изменить статус посылки, ошибка")
 
 	// check
 	// получите добавленную посылку и убедитесь, что статус обновился
 	secondParcel, err := store.Get(id)
-	require.NoError(t, err, "Несмог получить посылку, ошибка")
+	require.NoError(t, err, "Не смог получить посылку, ошибка")
 	require.Equal(t, newStatus, secondParcel.Status, "Статус у полученной из базы посылки не верный")
 }
 
@@ -121,7 +121,7 @@ func TestSetStatus(t *testing.T) {
 func TestGetByClient(t *testing.T) {
 	// prepare
 	db, err := sql.Open("sqlite", "tracker.db")
-	require.NoError(t, err, "Несмог подключиться к базе, ошибка")
+	require.NoError(t, err, "Не смог подключиться к базе, ошибка")
 	defer db.Close()
 	store := NewParcelStore(db)
 
@@ -141,7 +141,7 @@ func TestGetByClient(t *testing.T) {
 	// add
 	for i := 0; i < len(parcels); i++ {
 		id, err := store.Add(parcels[i]) // добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
-		require.NoError(t, err, "Несмог добавить посылку, ошибка")
+		require.NoError(t, err, "Не смог добавить посылку, ошибка")
 		require.NotZero(t, id, "Посылку положил, но id у нее 0")
 
 		// обновляем идентификатор добавленной у посылки
@@ -154,7 +154,7 @@ func TestGetByClient(t *testing.T) {
 	// get by client
 	storedParcels, err := store.GetByClient(client) // получите список посылок по идентификатору клиента, сохранённого в переменной client
 	// убедитесь в отсутствии ошибки
-	require.NoError(t, err, "Несмог получить посылку для клиента, ошибка")
+	require.NoError(t, err, "Не смог получить посылку для клиента, ошибка")
 	// убедитесь, что количество полученных посылок совпадает с количеством добавленных
 	require.Equal(t, len(parcels), len(storedParcels), "Загрузили одно количество посылок, а получили другое, ошибка")
 	// check

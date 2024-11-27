@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	_ "modernc.org/sqlite"
 )
@@ -42,23 +43,23 @@ func TestAddGetDelete(t *testing.T) {
 	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
 	id, err := store.Add(parcel)
 	require.NoError(t, err, "Не смог добавить посылку, ошибка")
-	require.NotZero(t, id, "Посылку положил, но id у нее 0")
+	assert.NotZero(t, id, "Посылку положил, но id у нее 0")
 	parcel.Number = id
 
 	// get
 	// получите только что добавленную посылку, убедитесь в отсутствии ошибки
 	// проверьте, что значения всех полей в полученном объекте совпадают со значениями полей в переменной parcel
 	secondParcel, err := store.Get(id)
-	require.NoError(t, err, "Не смог получить посылку, ошибка")
-	require.Equal(t, parcel, secondParcel, "Отправленная и полученная посылки не совпадают")
+	assert.NoError(t, err, "Не смог получить посылку, ошибка")
+	assert.Equal(t, parcel, secondParcel, "Отправленная и полученная посылки не совпадают")
 
 	// delete
 	// удалите добавленную посылку, убедитесь в отсутствии ошибки
 	// проверьте, что посылку больше нельзя получить из БД
 	err = store.Delete(id)
-	require.NoError(t, err, "Не смог удалить посылку, ошибка")
+	assert.NoError(t, err, "Не смог удалить посылку, ошибка")
 	_, err = store.Get(id)
-	require.Error(t, err, "Посулку которую удаляли удалось получить")
+	assert.ErrorIs(t, err, sql.ErrNoRows, "При запросе удаленной посылки не получена ошибка sql.ErrNoRows")
 }
 
 // TestSetAddress проверяет обновление адреса
@@ -74,19 +75,19 @@ func TestSetAddress(t *testing.T) {
 	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
 	id, err := store.Add(parcel)
 	require.NoError(t, err, "Не смог добавить посылку, ошибка")
-	require.NotZero(t, id, "Посылку положил, но id у нее 0")
+	assert.NotZero(t, id, "Посылку положил, но id у нее 0")
 
 	// set address
 	// обновите адрес, убедитесь в отсутствии ошибки
 	newAddress := "new test address"
 	err = store.SetAddress(id, newAddress)
-	require.NoError(t, err, "Не смог изменить адрес, ошибка")
+	assert.NoError(t, err, "Не смог изменить адрес, ошибка")
 
 	// check
 	// получите добавленную посылку и убедитесь, что адрес обновился
 	secondParcel, err := store.Get(id)
-	require.NoError(t, err, "Не смог получить посылку, ошибка")
-	require.Equal(t, newAddress, secondParcel.Address, "Адрес у полученной из базы посылки не верный")
+	assert.NoError(t, err, "Не смог получить посылку, ошибка")
+	assert.Equal(t, newAddress, secondParcel.Address, "Адрес у полученной из базы посылки не верный")
 }
 
 // TestSetStatus проверяет обновление статуса
@@ -102,19 +103,19 @@ func TestSetStatus(t *testing.T) {
 	// добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
 	id, err := store.Add(parcel)
 	require.NoError(t, err, "Не смог добавить посылку, ошибка")
-	require.NotZero(t, id, "Посылку положил, но id у нее 0")
+	assert.NotZero(t, id, "Посылку положил, но id у нее 0")
 
 	// set status
 	// обновите статус, убедитесь в отсутствии ошибки
 	newStatus := ParcelStatusDelivered
 	err = store.SetStatus(id, newStatus)
-	require.NoError(t, err, "Не смог изменить статус посылки, ошибка")
+	assert.NoError(t, err, "Не смог изменить статус посылки, ошибка")
 
 	// check
 	// получите добавленную посылку и убедитесь, что статус обновился
 	secondParcel, err := store.Get(id)
-	require.NoError(t, err, "Не смог получить посылку, ошибка")
-	require.Equal(t, newStatus, secondParcel.Status, "Статус у полученной из базы посылки не верный")
+	assert.NoError(t, err, "Не смог получить посылку, ошибка")
+	assert.Equal(t, newStatus, secondParcel.Status, "Статус у полученной из базы посылки не верный")
 }
 
 // TestGetByClient проверяет получение посылок по идентификатору клиента
@@ -141,8 +142,8 @@ func TestGetByClient(t *testing.T) {
 	// add
 	for i := 0; i < len(parcels); i++ {
 		id, err := store.Add(parcels[i]) // добавьте новую посылку в БД, убедитесь в отсутствии ошибки и наличии идентификатора
-		require.NoError(t, err, "Не смог добавить посылку, ошибка")
-		require.NotZero(t, id, "Посылку положил, но id у нее 0")
+		assert.NoError(t, err, "Не смог добавить посылку, ошибка")
+		assert.NotZero(t, id, "Посылку положил, но id у нее 0")
 
 		// обновляем идентификатор добавленной у посылки
 		parcels[i].Number = id
@@ -154,16 +155,16 @@ func TestGetByClient(t *testing.T) {
 	// get by client
 	storedParcels, err := store.GetByClient(client) // получите список посылок по идентификатору клиента, сохранённого в переменной client
 	// убедитесь в отсутствии ошибки
-	require.NoError(t, err, "Не смог получить посылку для клиента, ошибка")
+	assert.NoError(t, err, "Не смог получить посылку для клиента, ошибка")
 	// убедитесь, что количество полученных посылок совпадает с количеством добавленных
-	require.Equal(t, len(parcels), len(storedParcels), "Загрузили одно количество посылок, а получили другое, ошибка")
+	assert.Len(t, storedParcels, 3, "Загрузили одно количество посылок, а получили другое, ошибка")
 	// check
 	for _, parcel := range storedParcels {
 		// в parcelMap лежат добавленные посылки, ключ - идентификатор посылки, значение - сама посылка
 		// убедитесь, что все посылки из storedParcels есть в parcelMap
 		// убедитесь, что значения полей полученных посылок заполнены верно
 		expectedParcel, exists := parcelMap[parcel.Number]
-		require.True(t, exists, "Посылка с ID %d не найдена в parcelMap", parcel.Number)
-		require.Equal(t, expectedParcel, parcel, "Посылка с ID %d не совпадает с ожидаемой", parcel.Number)
+		assert.True(t, exists, "Посылка с ID %d не найдена в parcelMap", parcel.Number)
+		assert.Equal(t, expectedParcel, parcel, "Посылка с ID %d не совпадает с ожидаемой", parcel.Number)
 	}
 }
